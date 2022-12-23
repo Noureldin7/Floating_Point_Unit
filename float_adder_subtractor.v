@@ -1,60 +1,61 @@
 module float_adder_subtractor(
-	port_signA,
-	port_expA,
-	port_mantA,
-	port_signB,
-	port_expB,
-	port_mantB,
+	inA,
+	inB,
 	clk,
 	op,
 	load,
-	port_signOut,
-	port_expOut,
-	port_mantOut,
+	out,
 	valid
 );
-input port_signA;
-input [7:0] port_expA;
-input [22:0] port_mantA;
-input port_signB;
-input [7:0] port_expB;
-input [22:0] port_mantB;
+parameter PRECISION = 32;
+
+input [PRECISION-1:0] inA;
+input [PRECISION-1:0] inB;
 input clk;
 input op;
 input load;
-output port_signOut;
-output [7:0] port_expOut;
-output [22:0] port_mantOut;
+output [PRECISION-1:0] out;
 output valid;
 
+localparam expSize = (PRECISION==32) ? 8 : 11;
+localparam mantSize = (PRECISION==32) ? 23 : 52;
+
+localparam expInf = (PRECISION==32) ? 8'hff : 11'hfff;
+localparam mantInf = (PRECISION==32) ? 23'h0 : 52'h0;
+localparam expNaN = (PRECISION==32) ? 8'hff : 11'hfff;
+localparam mantNaN = (PRECISION==32) ? 23'hffffff : 52'hfffffffffffff;
+localparam expZero = (PRECISION==32) ? 8'h0 : 11'h0;
+localparam mantZero = (PRECISION==32) ? 23'h0 : 52'h0;
+localparam neglectThreshold = (PRECISION==32) ? 5'd23 : 6'd52;
+
+
 reg signA;
-reg [7:0] expA;
-reg [23:0] mantA;
+reg [expSize-1:0] expA;
+reg [mantSize:0] mantA;
 reg signB;
-reg [7:0] expB;
-reg [23:0] mantB;
+reg [expSize-1:0] expB;
+reg [mantSize:0] mantB;
 reg signOut;
-reg [7:0] expOut;
-reg [24:0] mantOut;
+reg [expSize-1:0] expOut;
+reg [mantSize+1:0] mantOut;
 reg Aisbig;
 reg diffSign;
-reg shiftPhase;
+reg subShiftPhase;
+reg addShiftPhase;
+reg specialCase;
 reg validOutput;
-//Zero Handling
+// Handle negligible operations
 
 always @(posedge clk) begin
 	
-	
-	//Input Fetch Cycle
+	//!Input Fetch Cycle
 	if (load==1'b1) begin
-		signA <= port_signA;
-		expA <= port_expA;
-		//mantA <= (signA==1'b1)?(-{1'b1,port_mantA}):{1'b1,port_mantA};
-		mantA <= {1'b1,port_mantA};
-		signB <= port_signB ^ op;
-		expB <= port_expB;
-		//mantB <= (signB==1'b1)?(-{1'b1,port_mantB}):{1'b1,port_mantB};
-		mantB <= {1'b1,port_mantB};
+		signA <= inA[PRECISION-1];
+		expA <= inA[PRECISION-2:mantSize];
+		mantA <= {1'b1,inA[mantSize-1:0]};
+		signB <= inB[PRECISION-1] ^ op;
+		expB <= inB[PRECISION-2:mantSize];
+		mantB <= {1'b1,inB[mantSize-1:0]};
 		if (expA>expB)
 			Aisbig <= 1'b1;
 		else if (expB>expA)
@@ -64,89 +65,170 @@ always @(posedge clk) begin
 				Aisbig <= 1'b1;
 			else
 				Aisbig <= 1'b0;
-		//Aisbig <= (expA>expB)? 1'b1 : ((expA<expB) ? 1'b0 : ((mantA>mantB) 1'b1 ? : 1'b0));
 		diffSign <= signA ^ signB;
-		shiftPhase <= 1'b0;
+		subShiftPhase <= 1'b0;
+		addShiftPhase <= 1'b0;
 		validOutput <= 1'b0;
+		//! Filtering Special Numbers
+		if((expA==expNaN && mantA[mantSize-1]==1'b1) || (expB==expNaN && mantB[mantSize-1]==1'b1)) begin
+			signOut <= 1'b0;
+			expOut <= expNaN;
+			mantOut <= {2'h0,mantNaN};
+			specialCase <= 1'b1;
+		end
+		else if(expA==expInf && mantA==mantInf) begin
+			if(expB==expInf && mantB==mantInf && diffSign==1'b1) begin
+				signOut <= 1'b0;
+				expOut <= expNaN;
+				mantOut <= {2'h0,mantNaN};
+			end
+			else begin
+				signOut <= signA;
+				expOut <= expInf;
+				mantOut <= {2'h0,mantInf};
+			end
+			specialCase <= 1'b1;
+		end
+		else if(expB==expInf && mantB[mantSize-1]==1'b0) begin
+			if(expA==expInf &&mantA==mantInf && diffSign==1'b1) begin
+				signOut <= 1'b0;
+				expOut <= expNaN;
+				mantOut <= {2'h0,mantNaN};
+			end
+			else begin
+				signOut <= signB;
+				expOut <= expInf;
+				mantOut <= {2'h0,mantInf};
+			end
+			specialCase <= 1'b1;
+		end
+		else if(expA == expZero && mantA == mantZero) begin
+			signOut <= signB;
+			expOut <= expB;
+			mantOut <= {1'h0,mantB};
+			specialCase <= 1'b1;
+		end
+		else if(expB == expZero && mantB == mantZero) begin
+			signOut <= signA;
+			expOut <= expA;
+			mantOut <= { 1'h0 , mantA };
+			specialCase <= 1'b1;
+		end
+		else if (Aisbig==1'b1 && expA-expB > neglectThreshold) begin
+			signOut <= signA;
+			expOut <= expA;
+			mantOut <= {1'h0,mantA};
+			specialCase <= 1'b1;
+		end
+		else if (Aisbig==1'b0 && expB-expA > neglectThreshold) begin
+			signOut <= signB;
+			expOut <= expB;
+			mantOut <= {1'h0,mantB};
+			specialCase <= 1'b1;
+		end
+		else
+			specialCase <= 1'b0;
+	end
+	else if(specialCase==1'b1) begin
+		validOutput <= 1'b1;
+	end
+	//! Shifting For Addition Only
+	else if (addShiftPhase==1'b1) begin
+		if (validOutput <= 1'b0) begin
+			if(mantOut[mantSize+1]==1'b1) begin
+				mantOut[mantSize-1:0] <= mantOut[mantSize:1];
+				expOut <= expOut + 1'b1;
+			end
+			if(expOut==expInf)
+				mantOut <= {2'h0,mantInf};
+			validOutput <= 1'b1;
+		end
 	end
 	
-	
-	
-	// Shifting For Subtraction Only
-	else if (shiftPhase==1'b1) begin
+	//! Shifting For Subtraction Only
+	else if (subShiftPhase==1'b1) begin
 		if (validOutput <= 1'b0)
-			if(mantOut[23:20]==4'b0000) begin
-				mantOut[23:0] <= {mantOut[19:0],4'b0000};
-				expOut <= expOut - 3'h4;
+			if(mantOut[mantSize:mantSize-3]==4'b0000) begin
+				mantOut[mantSize:0] <= {mantOut[mantSize-4:0],4'b0000};
+				if(expOut<3'h4) begin
+					mantOut <= {2'h0,mantZero};
+					validOutput <= 1'b1;
+				end
+				else
+					expOut <= expOut - 3'h4;
 			end
-			else if (mantOut[23]==1'b0) begin
-				mantOut[23:0] <= {mantOut[22:0],1'b0};
-				expOut <= expOut - 1'b1;
+			else if (mantOut[mantSize]==1'b0) begin
+				mantOut[mantSize:0] <= {mantOut[mantSize-1:0],1'b0};
+				if(expOut==expZero) begin
+					mantOut <= {2'h0,mantZero};
+					validOutput <= 1'b1;
+				end
+				else
+					expOut <= expOut - 1'b1;
 			end
 			else
 				validOutput <= 1'b1;
 	end
-	
-	
-	//Exponent Synchronization Shifting
-	else begin
-	
-		//Check Who Is Bigger To Set Sign Bit And Shift The Smaller Number
+	//!Exponent Synchronization Shifting
+	else begin	
+		//!Check Who Is Bigger To Set Sign Bit And Shift The Smaller Number
 		if (Aisbig==1'b1) begin
-			//Big Shift
+			//!Big Shift
 			if (expA-expB<4) begin
-				mantB <= {1'b0,mantB[23:1]};
+				mantB <= {1'b0,mantB[mantSize:1]};
 				expB <= expB + 1'b1;
 			end
-			//Small Shift
+			//!Small Shift
 			else begin
-				mantB <= {4'b0000,mantB[23:4]};
+				mantB <= {4'b0000,mantB[mantSize:4]};
 				expB <= expB + 3'h4;
 			end
-			//Synchronization Finished
+			//!Synchronization Finished
 			if (expA==expB) begin
-				if(diffSign==1'b1)
+				if(diffSign==1'b1) begin
 					mantOut <= mantA - mantB;
+					subShiftPhase <= 1'b1;
+				end
 				else begin
 					mantOut <= mantA + mantB;
-					validOutput <= 1'b1;
+					addShiftPhase <= 1'b1;
 				end
 				signOut <= signA;
 				expOut <= expA;
-				shiftPhase <= 1'b1;
 			end
 		end
 		else begin
-			//Big Shift
+			//!Big Shift
 			if (expB-expA<4) begin
-				mantA <= {1'b0,mantA[23:1]};
+				mantA <= {1'b0,mantA[mantSize:1]};
 				expA <= expA + 1'b1;
 			end
-			//Small Shift
+			//!Small Shift
 			else begin
-				mantA <= {4'b0000,mantA[23:4]};
+				mantA <= {4'b0000,mantA[mantSize:4]};
 				expA <= expA + 3'h4;
 			end
-			//Synchronization Finished
+			//!Synchronization Finished
 			if (expA==expB) begin
-				if(diffSign==1'b1)
+				if(diffSign==1'b1) begin
 					mantOut <= mantB - mantA;
+					subShiftPhase <= 1'b1;
+				end
 				else begin
 					mantOut <= mantB + mantA;
-					validOutput <= 1'b1;
+					addShiftPhase <= 1'b1;
 				end
 				signOut <= signB;
 				expOut <= expB;
-				shiftPhase <= 1'b1;
 			end
 		end
 	end
 end
 
 
-assign port_signOut = signOut;
-assign port_expOut = (mantOut[24]==1'b1)?expOut+1'b1:expOut;
-assign port_mantOut = (mantOut[24]==1'b1)?mantOut[23:1]:mantOut[22:0];
+assign out[PRECISION-1] = signOut;
+assign out[PRECISION-2:mantSize] = expOut;
+assign out[mantSize-1:0] = mantOut[mantSize-1:0];
 assign valid = validOutput;
 
 endmodule
