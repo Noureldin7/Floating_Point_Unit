@@ -25,9 +25,9 @@ localparam PRECISION = 32;
 	initial begin
 		Calculate(1.5, 1.5);
 		Calculate(3.14, 0.02);
-		Calculate(0.15, 500.0);
+		Calculate(0.2, 500.0);
 		Calculate(0, 1.5);
-		Calculate(0, 0);
+		// Calculate(0, 0);
 		Calculate(0, 0.5);
 		$finish();
 	end	
@@ -37,8 +37,8 @@ localparam PRECISION = 32;
 	wire DivValid;
 	always @(posedge DivValid or negedge LoadDiv) begin
 		if (DivValid) begin
-			$display("Division done at %0t, %f / %f = %f, %s", $time, a, b, $bitstoshortreal(DivResult), ($bitstoshortreal(DivResult) == a/b) ? "Valid" : "Not Valid");
-			if ($bitstoshortreal(DivResult) != a/b)
+			$display("Division done at %0t, %f / %f = %f, %s", $time, a, b, $bitstoshortreal(DivResult), (DivResult == $shortrealtobits(a/b)) ? "Valid" : "Not Valid");
+			if (DivResult != $shortrealtobits(a/b))
 				$display("Expected %b \nGot      %b", $shortrealtobits(a/b), DivResult);
 		end
 	end

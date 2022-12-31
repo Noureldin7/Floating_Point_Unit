@@ -68,23 +68,23 @@ module fpu_tb();
 		if (Done) begin
 			case (Operation)
 				2'b00: begin
-					$display("Addition done at %0t, %f + %f = %f, %s", $time, a, b, $bitstoshortreal(Result), ($bitstoshortreal(Result) == a + b) ? "Valid" : "Not Valid");
-					if ($bitstoshortreal(Result) != a + b)
+					$display("Addition done at %0t, %f + %f = %f, %s", $time, a, b, $bitstoshortreal(Result), (Result == $shortrealtobits(a + b)) ? "Valid" : "Not Valid");
+					if (Result != $shortrealtobits(a + b))
 						$display("Expected %b \nGot      %b", $shortrealtobits(a + b), Result);
 				end
 				2'b01: begin
-					$display("Subtraction done at %0t, %f - %f = %f, %s", $time, a, b, $bitstoshortreal(Result), ($bitstoshortreal(Result) == a - b) ? "Valid" : "Not Valid");
+					$display("Subtraction done at %0t, %f - %f = %f, %s", $time, a, b, $bitstoshortreal(Result), (Result == $shortrealtobits(a - b)) ? "Valid" : "Not Valid");
 					if ($bitstoshortreal(Result) != a - b)
 						$display("Expected %b \nGot      %b", $shortrealtobits(a - b), Result);
 				end
 				2'b10: begin
-					$display("Multiplication done at %0t, %f x %f = %f, %s", $time, a, b, $bitstoshortreal(Result), ($bitstoshortreal(Result) == a * b) ? "Valid" : "Not Valid");
-					if ($bitstoshortreal(Result) != a * b)
+					$display("Multiplication done at %0t, %f x %f = %f, %s", $time, a, b, $bitstoshortreal(Result), (Result == $shortrealtobits(a * b)) ? "Valid" : "Not Valid");
+					if (Result != $shortrealtobits(a * b))
 						$display("Expected %b \nGot      %b", $shortrealtobits(a * b), Result);
 				end
 				2'b11: begin
-					$display("Division done at %0t, %f / %f = %f, %s", $time, a, b, $bitstoshortreal(Result), ($bitstoshortreal(Result) == a/b) ? "Valid" : "Not Valid");
-					if ($bitstoshortreal(Result) != a/b)
+					$display("Division done at %0t, %f / %f = %f, %s", $time, a, b, $bitstoshortreal(Result), (Result == $shortrealtobits(a / b)) ? "Valid" : "Not Valid");
+					if (Result != $shortrealtobits(a / b))
 						$display("Expected %b \nGot      %b", $shortrealtobits(a/b), Result);
 				end
 			endcase
