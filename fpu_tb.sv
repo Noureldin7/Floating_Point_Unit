@@ -88,6 +88,7 @@ module fpu_tb();
 						$display("Expected %b \nGot      %b", $shortrealtobits(a/b), Result);
 				end
 			endcase
+			$display("\n\n");
 		end
 	end
 
