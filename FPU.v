@@ -19,6 +19,16 @@ module FPU
 	reg LoadDiv;
 
 
+	wire [PRECISION-1:0] DivToAddA;
+	wire [PRECISION-1:0] DivToAddB;
+	wire DivToAddOp;
+	wire DivToAddLoad;
+	wire [PRECISION-1:0] DivToMulA;
+	wire [PRECISION-1:0] DivToMulB;
+	wire [PRECISION-1:0] DivResult;
+	wire DivValid;
+
+
 	wire [PRECISION-1:0] AddA = (~StoredOperation[1]) ? StoredA : DivToAddA;
 	wire [PRECISION-1:0] AddB = (~StoredOperation[1]) ? StoredB : DivToAddB;
 	wire AddOp = (~StoredOperation[1]) ? StoredOperation[0] : DivToAddOp;
@@ -32,21 +42,15 @@ module FPU
 	wire [PRECISION-1:0] MulResult;
 
 
-	wire [PRECISION-1:0] DivToAddA;
-	wire [PRECISION-1:0] DivToAddB;
-	wire DivToAddOp;
-	wire DivToAddLoad;
-	wire [PRECISION-1:0] DivToMulA;
-	wire [PRECISION-1:0] DivToMulB;
-	wire [PRECISION-1:0] DivResult;
-	wire DivValid;
 
 
 
-	assign Result = (~StoredOperation[1]) ? AddOut :
+	assign Result =	(LoadDiv | ExternalAddLoad) ? {PRECISION{1'b0}}:
+					(~StoredOperation[1]) ? AddOut :
 					(~StoredOperation[0]) ? MulResult : DivResult;
 
-	assign Done = (~StoredOperation[1]) ? AddValid :
+	assign Done =	(LoadDiv | ExternalAddLoad) ? 1'b0:
+					(~StoredOperation[1]) ? AddValid :
 					(~StoredOperation[0]) ? 1'b1 : DivValid;
 
 
