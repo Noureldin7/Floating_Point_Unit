@@ -55,6 +55,7 @@ module fpu_tb();
 
 	initial begin
 		#5;
+		$finish();
 		Add(0.0, 1.0);
 		Sub(0.0, 8.0);
 		Mul(0.0, 1.0);

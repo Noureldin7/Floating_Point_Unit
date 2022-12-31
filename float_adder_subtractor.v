@@ -21,12 +21,20 @@ localparam expSize = (PRECISION==32) ? 8 : 11;
 localparam mantSize = (PRECISION==32) ? 23 : 52;
 
 localparam expInf = (PRECISION==32) ? 8'hff : 11'hfff;
-localparam mantInf = (PRECISION==32) ? 23'h0 : 52'h0;
+localparam mantInf = (PRECISION==32) ? {1'h1,23'h0} : {1'h1,52'h0};
 localparam expNaN = (PRECISION==32) ? 8'hff : 11'hfff;
-localparam mantNaN = (PRECISION==32) ? 23'hffffff : 52'hfffffffffffff;
+localparam mantNaN = (PRECISION==32) ? {1'h1,23'hffffff} : {1'h1,52'hfffffffffffff};
 localparam expZero = (PRECISION==32) ? 8'h0 : 11'h0;
-localparam mantZero = (PRECISION==32) ? 23'h0 : 52'h0;
+localparam mantZero = (PRECISION==32) ? {1'h1,23'h0} : {1'h1,52'h0};
 localparam neglectThreshold = (PRECISION==32) ? 5'd23 : 6'd52;
+
+
+wire wire_signA = inA[PRECISION-1];
+wire [expSize-1:0] wire_expA = inA[PRECISION-2:mantSize];
+wire [mantSize:0] wire_mantA = {1'b1,inA[mantSize-1:0]};
+wire wire_signB = inB[PRECISION-1] ^ op;
+wire [expSize-1:0] wire_expB = inB[PRECISION-2:mantSize];
+wire [mantSize:0] wire_mantB = {1'b1,inB[mantSize-1:0]};
 
 
 reg signA;
@@ -56,74 +64,74 @@ always @(posedge clk) begin
 		signB <= inB[PRECISION-1] ^ op;
 		expB <= inB[PRECISION-2:mantSize];
 		mantB <= {1'b1,inB[mantSize-1:0]};
-		if (expA>expB)
+		if (wire_expA>wire_expB)
 			Aisbig <= 1'b1;
-		else if (expB>expA)
+		else if (wire_expB>wire_expA)
 			Aisbig <= 1'b0;
 		else
-			if(mantA>mantB)
+			if(wire_mantA>wire_mantB)
 				Aisbig <= 1'b1;
 			else
 				Aisbig <= 1'b0;
-		diffSign <= signA ^ signB;
+		diffSign <= wire_signA ^ wire_signB;
 		subShiftPhase <= 1'b0;
 		addShiftPhase <= 1'b0;
 		validOutput <= 1'b0;
 		//! Filtering Special Numbers
-		if((expA==expNaN && mantA[mantSize-1]==1'b1) || (expB==expNaN && mantB[mantSize-1]==1'b1)) begin
+		if((wire_expA==expNaN && wire_mantA[mantSize-1]==1'b1) || (wire_expB==expNaN && wire_mantB[mantSize-1]==1'b1)) begin
 			signOut <= 1'b0;
 			expOut <= expNaN;
 			mantOut <= {2'h0,mantNaN};
 			specialCase <= 1'b1;
 		end
-		else if(expA==expInf && mantA==mantInf) begin
-			if(expB==expInf && mantB==mantInf && diffSign==1'b1) begin
+		else if(wire_expA==expInf && wire_mantA==mantInf) begin
+			if(wire_expB==expInf && wire_mantB==mantInf && diffSign==1'b1) begin
 				signOut <= 1'b0;
 				expOut <= expNaN;
 				mantOut <= {2'h0,mantNaN};
 			end
 			else begin
-				signOut <= signA;
+				signOut <= wire_signA;
 				expOut <= expInf;
 				mantOut <= {2'h0,mantInf};
 			end
 			specialCase <= 1'b1;
 		end
-		else if(expB==expInf && mantB[mantSize-1]==1'b0) begin
-			if(expA==expInf &&mantA==mantInf && diffSign==1'b1) begin
+		else if(wire_expB==expInf && wire_mantB[mantSize-1]==1'b0) begin
+			if(wire_expA==expInf &&wire_mantA==mantInf && diffSign==1'b1) begin
 				signOut <= 1'b0;
 				expOut <= expNaN;
 				mantOut <= {2'h0,mantNaN};
 			end
 			else begin
-				signOut <= signB;
+				signOut <= wire_signB;
 				expOut <= expInf;
 				mantOut <= {2'h0,mantInf};
 			end
 			specialCase <= 1'b1;
 		end
-		else if(expA == expZero && mantA == mantZero) begin
-			signOut <= signB;
-			expOut <= expB;
-			mantOut <= {1'h0,mantB};
+		else if(wire_expA == expZero && wire_mantA == mantZero) begin
+			signOut <= wire_signB;
+			expOut <= wire_expB;
+			mantOut <= {1'h0,wire_mantB};
 			specialCase <= 1'b1;
 		end
-		else if(expB == expZero && mantB == mantZero) begin
-			signOut <= signA;
-			expOut <= expA;
-			mantOut <= { 1'h0 , mantA };
+		else if(wire_expB == expZero && wire_mantB == mantZero) begin
+			signOut <= wire_signA;
+			expOut <= wire_expA;
+			mantOut <= { 1'h0 , wire_mantA };
 			specialCase <= 1'b1;
 		end
-		else if (Aisbig==1'b1 && expA-expB > neglectThreshold) begin
-			signOut <= signA;
-			expOut <= expA;
-			mantOut <= {1'h0,mantA};
+		else if (Aisbig==1'b1 && wire_expA-wire_expB > neglectThreshold) begin
+			signOut <= wire_signA;
+			expOut <= wire_expA;
+			mantOut <= {1'h0,wire_mantA};
 			specialCase <= 1'b1;
 		end
-		else if (Aisbig==1'b0 && expB-expA > neglectThreshold) begin
-			signOut <= signB;
-			expOut <= expB;
-			mantOut <= {1'h0,mantB};
+		else if (Aisbig==1'b0 && wire_expB-wire_expA > neglectThreshold) begin
+			signOut <= wire_signB;
+			expOut <= wire_expB;
+			mantOut <= {1'h0,wire_mantB};
 			specialCase <= 1'b1;
 		end
 		else
@@ -173,12 +181,12 @@ always @(posedge clk) begin
 	else begin	
 		//!Check Who Is Bigger To Set Sign Bit And Shift The Smaller Number
 		if (Aisbig==1'b1) begin
-			//!Big Shift
+			//!Small Shift
 			if (expA-expB<4) begin
 				mantB <= {1'b0,mantB[mantSize:1]};
 				expB <= expB + 1'b1;
 			end
-			//!Small Shift
+			//!Big Shift
 			else begin
 				mantB <= {4'b0000,mantB[mantSize:4]};
 				expB <= expB + 3'h4;
