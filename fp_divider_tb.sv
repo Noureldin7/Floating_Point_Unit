@@ -28,6 +28,18 @@ localparam PRECISION = 32;
 		StoredOperation = 2'b11;
 		#10 LoadDiv = 1'b0;
 
+		#500 a = 0.0;
+		b = 3.14;
+		LoadDiv = 1'b1;
+		StoredOperation = 2'b11;
+		#10 LoadDiv = 1'b0;
+
+
+		#500 a = 0.0;
+		b = 0.0;
+		LoadDiv = 1'b1;
+		StoredOperation = 2'b11;
+		#10 LoadDiv = 1'b0;
 
 		#500 $finish();
 	end	
@@ -35,9 +47,9 @@ localparam PRECISION = 32;
 	// print each final result
 	wire [PRECISION-1:0] DivResult;
 	wire DivValid;
-	always @(posedge DivValid) begin
-		$display("Division done %f / %f = %f, %s", a, b, $bitstoshortreal(DivResult), DivResult == $shortrealtobits(a/b) ? "Valid" : "Not Valid");
-		if (DivResult != $shortrealtobits(a/b))
+	always @(posedge DivValid or negedge LoadDiv) begin
+		$display("Division done %f / %f = %f, %s", a, b, $bitstoshortreal(DivResult), ($bitstoshortreal(DivResult) == a/b) ? "Valid" : "Not Valid");
+		if ($bitstoshortreal(DivResult) != a/b)
 			$display("Expected %b \nGot      %b", $shortrealtobits(a/b), DivResult);
 	end
 
@@ -54,13 +66,13 @@ localparam PRECISION = 32;
 		shortreal x2;
 		x1 = $bitstoshortreal(DivToAddA);
 		x2 = $bitstoshortreal(DivToAddB);
-		$display("At time %t, requested %f %s %f", $time, x1, DivToAddOp ? "-" : "+", x2);
+		$display("At time %0t, requested %f %s %f", $time, x1, DivToAddOp ? "-" : "+", x2);
 		AddValid = 1'b0;
 		if (DivToAddOp)
 			x2 = -1 * x2;
 		#25 AddValid = 1'b1;
 		AddOut = $shortrealtobits(x1 + x2);
-		$display("At time %t, request %f %s %f got response %f", $time, x1, DivToAddOp ? "-" : "+", x2, $bitstoshortreal(AddOut));
+		$display("At time %0t, request %f %s %f got response %f", $time, x1, DivToAddOp ? "-" : "+", x2, $bitstoshortreal(AddOut));
 	end
 
 	//emulate multiplier
@@ -74,7 +86,7 @@ localparam PRECISION = 32;
 		x2 = $bitstoshortreal(DivToMulB);
 		MulResult = $shortrealtobits(x1 * x2);
 		if (|{DivToMulA, DivToMulB})
-			$display("At time %t, requested %f x %f and got %f", $time, x1, x2, $bitstoshortreal(MulResult));
+			$display("At time %0t, requested %f x %f and got %f", $time, x1, x2, $bitstoshortreal(MulResult));
 	end
 
 
