@@ -78,7 +78,7 @@ module fpu_tb();
 						$display("Expected %b \nGot      %b", $shortrealtobits(a - b), Result);
 				end
 				2'b10: begin
-					$display("Multiplication done at %0t, %f / %f = %f, %s", $time, a, b, $bitstoshortreal(Result), ($bitstoshortreal(Result) == a * b) ? "Valid" : "Not Valid");
+					$display("Multiplication done at %0t, %f x %f = %f, %s", $time, a, b, $bitstoshortreal(Result), ($bitstoshortreal(Result) == a * b) ? "Valid" : "Not Valid");
 					if ($bitstoshortreal(Result) != a * b)
 						$display("Expected %b \nGot      %b", $shortrealtobits(a * b), Result);
 				end
