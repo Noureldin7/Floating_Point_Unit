@@ -102,12 +102,12 @@ assign Result = {sign, exp_out[E-1:0], norm_mul} ;
  exp_out[E-1:0] = NaN[N-2:M];
  norm_mul[M-1:0] = NaN[M-1:0];
  end
- else if (sum_e1_e2[E]==1'b1)
- begin
- sign = s1 ^ s2;
- exp_out[E-1:0] = p_inf[N-2:M];
- norm_mul[M-1:0] = p_inf[M-1:0];
- end
+ //else if (sum_e1_e2[E]==1'b1)
+ //begin
+ //sign = s1 ^ s2;
+ //exp_out[E-1:0] = p_inf[N-2:M];
+ //norm_mul[M-1:0] = p_inf[M-1:0];
+ //end
  else
  //None of the special cases above ? then work normally 
  begin
