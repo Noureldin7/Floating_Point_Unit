@@ -109,7 +109,7 @@ module FP_Divider
 				//Perform 31/17 * B
 				Result <= {PRECISION{1'b0}};
 				toMulA <= THIRTYTWO_OVER_SEVENTEEN;
-				toMulB <= StoredB;
+				toMulB <= {B[S], HALF[E:M+1], B[M:0]};
 			end
 		end
 		else if (Enable) begin
@@ -202,14 +202,10 @@ module FP_Divider
 							//Increment n
 							IterationCounter <= IterationCounter + 3'b001;
 							StepCounter <= 2'b00;
-							// Disable Adder
-							toAddA <= ZERO;
-							toAddB <= ZERO;
-							toAddOp <= 1'b0;
 							// Store x(n)
-							StoredX <= fromAddOut;
+							StoredX <= fromMulResult;
 							// Perform x(n)D
-							toMulA <= fromAddOut;
+							toMulA <= fromMulResult;
 							toMulB <= StoredB;
 						end
 						default: begin
