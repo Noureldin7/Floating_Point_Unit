@@ -94,7 +94,7 @@ module FP_Divider
 				toMulA <= {PRECISION{1'b0}};
 				toMulB <= {PRECISION{1'b0}};
 			end
-			else if (exponentDifferenceCalculation < ONE[E+1:M+1]) begin //underflow
+			else if (isZero_A | (exponentDifferenceCalculation < ONE[E+1:M+1])) begin //underflow
 				IterationCounter <= 3'b111;
 				StepCounter <= 2'b11;
 				Valid <= 1'b1;
@@ -200,7 +200,10 @@ module FP_Divider
 						end
 						3'b10: begin
 							//Increment n
-							IterationCounter <= IterationCounter + 3'b001;
+							if (StoredX != fromMulResult)
+								IterationCounter <= IterationCounter + 3'b001;
+							else
+								IterationCounter <= 3'b111;
 							StepCounter <= 2'b00;
 							// Store x(n)
 							StoredX <= fromMulResult;

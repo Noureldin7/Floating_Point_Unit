@@ -11,46 +11,36 @@ localparam PRECISION = 32;
 	reg LoadDiv = 1'b0;
 	shortreal a = 1.5;
 	shortreal b = 1.5;
-	initial begin
+
+	task Calculate(shortreal input1, shortreal input2);
+		a = input1;
+		b = input2;
 		#20 LoadDiv = 1'b1;
 		StoredOperation = 2'b11;
+		$display("Division started at %0t, %f / %f", $time, a, b);
 		#10 LoadDiv = 1'b0;
+		#500;
+	endtask
 
-		#500 a = 3.14;
-		b = 0.02;
-		LoadDiv = 1'b1;
-		StoredOperation = 2'b11;
-		#10 LoadDiv = 1'b0;
-
-		#500 a = 0.02;
-		b = 3.14;
-		LoadDiv = 1'b1;
-		StoredOperation = 2'b11;
-		#10 LoadDiv = 1'b0;
-
-		#500 a = 0.0;
-		b = 3.14;
-		LoadDiv = 1'b1;
-		StoredOperation = 2'b11;
-		#10 LoadDiv = 1'b0;
-
-
-		#500 a = 0.0;
-		b = 0.0;
-		LoadDiv = 1'b1;
-		StoredOperation = 2'b11;
-		#10 LoadDiv = 1'b0;
-
-		#500 $finish();
+	initial begin
+		Calculate(1.5, 1.5);
+		Calculate(3.14, 0.02);
+		Calculate(0.15, 500.0);
+		Calculate(0, 1.5);
+		Calculate(0, 0);
+		Calculate(0, 0.5);
+		$finish();
 	end	
 
 	// print each final result
 	wire [PRECISION-1:0] DivResult;
 	wire DivValid;
 	always @(posedge DivValid or negedge LoadDiv) begin
-		$display("Division done %f / %f = %f, %s", a, b, $bitstoshortreal(DivResult), ($bitstoshortreal(DivResult) == a/b) ? "Valid" : "Not Valid");
-		if ($bitstoshortreal(DivResult) != a/b)
-			$display("Expected %b \nGot      %b", $shortrealtobits(a/b), DivResult);
+		if (DivValid) begin
+			$display("Division done at %0t, %f / %f = %f, %s", $time, a, b, $bitstoshortreal(DivResult), ($bitstoshortreal(DivResult) == a/b) ? "Valid" : "Not Valid");
+			if ($bitstoshortreal(DivResult) != a/b)
+				$display("Expected %b \nGot      %b", $shortrealtobits(a/b), DivResult);
+		end
 	end
 
 
@@ -66,13 +56,13 @@ localparam PRECISION = 32;
 		shortreal x2;
 		x1 = $bitstoshortreal(DivToAddA);
 		x2 = $bitstoshortreal(DivToAddB);
-		$display("At time %0t, requested %f %s %f", $time, x1, DivToAddOp ? "-" : "+", x2);
+		// $display("At time %0t, requested %f %s %f", $time, x1, DivToAddOp ? "-" : "+", x2);
 		AddValid = 1'b0;
 		if (DivToAddOp)
 			x2 = -1 * x2;
 		#25 AddValid = 1'b1;
 		AddOut = $shortrealtobits(x1 + x2);
-		$display("At time %0t, request %f %s %f got response %f", $time, x1, DivToAddOp ? "-" : "+", x2, $bitstoshortreal(AddOut));
+		// $display("At time %0t, request %f %s %f got response %f", $time, x1, DivToAddOp ? "-" : "+", x2, $bitstoshortreal(AddOut));
 	end
 
 	//emulate multiplier
@@ -85,8 +75,8 @@ localparam PRECISION = 32;
 		x1 = $bitstoshortreal(DivToMulA);
 		x2 = $bitstoshortreal(DivToMulB);
 		MulResult = $shortrealtobits(x1 * x2);
-		if (|{DivToMulA, DivToMulB})
-			$display("At time %0t, requested %f x %f and got %f", $time, x1, x2, $bitstoshortreal(MulResult));
+		// if (|{DivToMulA, DivToMulB})
+			// $display("At time %0t, requested %f x %f and got %f", $time, x1, x2, $bitstoshortreal(MulResult));
 	end
 
 
