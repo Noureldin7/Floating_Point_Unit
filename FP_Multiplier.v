@@ -32,7 +32,7 @@ localparam E = (N==32)?8:11;
  
  localparam zero ={1'b0,{E{1'b0}},{M{1'b0}}};
 
- localparam NaN = {1'b1,{E{1'b1}},{M{1'b1}}};
+ localparam NaN = {1'b0,{E{1'b1}},{M{1'b1}}};
 
  localparam p_inf = {1'b0,{E{1'b1}},{M{1'b0}}};
 
@@ -90,6 +90,12 @@ assign Result = {sign, exp_out[E-1:0], norm_mul} ;
  exp_out[E-1:0] = {E{1'b1}};
  norm_mul[M-1:0] = {M{1'b0}};
  end
+ else if (((A==p_inf) || (A==n_inf)) || ((B == p_inf) || (B==n_inf)) && (A!==B))
+ begin
+ sign = s1 ^ s2;
+ exp_out[E-1:0] = {E{1'b1}};
+ norm_mul[M-1:0] = {M{1'b0}};
+ end
  else if((A==zero) || (B==zero))
  begin
  sign = 1'b0;
@@ -122,6 +128,13 @@ else
  exp_out = (N==32)?sum_e1_e2 - 9'd127:sum_e1_e2 - 11'd1023; 
  norm_mul = non_norm_mul[(2*M)-1:M]; 
  end
+ if(exp_out[E] == 1'b1)
+ begin
+//overflow
+ sign = NaN[N-1];
+ exp_out[E-1:0] = NaN[N-2:M];
+ norm_mul[M-1:0] = NaN[M-1:0];
+ end 
  end 
  end
 endmodule

@@ -86,19 +86,19 @@ module FP_Divider
 				toMulA <= {PRECISION{1'b0}};
 				toMulB <= {PRECISION{1'b0}};
 			end
-			else if (isInf_A | isZero_B | (exponentDifferenceCalculation > (3 * ONE[E-1:M+1]))) begin //Inf cases and overflow
-				IterationCounter <= 3'b111;
-				StepCounter <= 2'b11;
-				Valid <= 1'b1;
-				Result <= {A[S] ^ B[S],PINF[E:0]};
-				toMulA <= {PRECISION{1'b0}};
-				toMulB <= {PRECISION{1'b0}};
-			end
 			else if (isZero_A | (exponentDifferenceCalculation < ONE[E+1:M+1])) begin //underflow
 				IterationCounter <= 3'b111;
 				StepCounter <= 2'b11;
 				Valid <= 1'b1;
 				Result <= ZERO;
+				toMulA <= {PRECISION{1'b0}};
+				toMulB <= {PRECISION{1'b0}};
+			end
+			else if (isInf_A | isZero_B | (exponentDifferenceCalculation > (3 * ONE[E-1:M+1]))) begin //Inf cases and overflow
+				IterationCounter <= 3'b111;
+				StepCounter <= 2'b11;
+				Valid <= 1'b1;
+				Result <= {A[S] ^ B[S],PINF[E:0]};
 				toMulA <= {PRECISION{1'b0}};
 				toMulB <= {PRECISION{1'b0}};
 			end
