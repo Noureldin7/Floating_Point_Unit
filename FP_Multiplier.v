@@ -90,6 +90,12 @@ assign Result = {sign, exp_out[E-1:0], norm_mul} ;
  exp_out[E-1:0] = {E{1'b1}};
  norm_mul[M-1:0] = {M{1'b0}};
  end
+ else if (((A==p_inf) || (A==n_inf)) || ((B == p_inf) || (B==n_inf)) && (A!==B))
+ begin
+ sign = s1 ^ s2;
+ exp_out[E-1:0] = {E{1'b1}};
+ norm_mul[M-1:0] = {M{1'b0}};
+ end
  else if((A==zero) || (B==zero))
  begin
  sign = 1'b0;
