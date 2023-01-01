@@ -46,7 +46,7 @@ module FP_Divider
 	reg [E+1:M+1] ExponentDifference;
 	reg [2:0] IterationCounter;
 	// reg [2:0] IterationCounter_Next;
-	reg [2:0] StepCounter;
+	reg [1:0] StepCounter;
 	// reg [2:0] StepCounter_Next;
 
 	// Conditions on A
@@ -61,6 +61,10 @@ module FP_Divider
 
 	wire [E+1:M+1] exponentDifferenceCalculation = A[E:M+1] - B[E:M+1] + {ONE[E-1:M+1], 1'b0}; //check it works?
 	wire [E:M+1] resultExponent = ExponentDifference[E+1:M+1] - {ONE[E:M+1], 1'b0} + fromMulResult[E:M+1];
+
+
+//0 01110100 00000110001001001101111
+//0 11111101 00101100111011010011001
 
 	always @(posedge Clk) begin
 		if (Load & Enable) begin

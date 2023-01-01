@@ -1,6 +1,6 @@
 module fpu_tb();
 
-	localparam PRECISION = 64;
+	localparam PRECISION = 32;
 	localparam PINF = (PRECISION==32) ? 32'b0_11111111_00000000000000000000000 : 64'b0_11111111111_0000000000000000000000000000000000000000000000000000;
 	localparam NINF = (PRECISION==32) ? 32'b1_11111111_00000000000000000000000 : 64'b1_11111111111_0000000000000000000000000000000000000000000000000000;
 	localparam NAN = (PRECISION==32) ? 32'b0_11111111_11111111111111111111111 : 64'b0_11111111111_1111111111111111111111111111111111111111111111111111;
@@ -15,10 +15,10 @@ module fpu_tb();
 	end
 
 	// Main Test Scenario
-	real a = 1.5;
-	real b = 1.5;
+	shortreal a = 1.5;
+	shortreal b = 1.5;
 
-	task Add(real input1, real input2);
+	task Add(shortreal input1, shortreal input2);
 		a = input1;
 		b = input2;
 		#20 Reset = 1'b1;
@@ -27,7 +27,7 @@ module fpu_tb();
 		#12 Reset = 1'b0;
 		#988;
 	endtask
-	task Sub(real input1, real input2);
+	task Sub(shortreal input1, shortreal input2);
 		a = input1;
 		b = input2;
 		#20 Reset = 1'b1;
@@ -36,7 +36,7 @@ module fpu_tb();
 		#12 Reset = 1'b0;
 		#988;
 	endtask
-	task Mul(real input1, real input2);
+	task Mul(shortreal input1, shortreal input2);
 		a = input1;
 		b = input2;
 		#20 Reset = 1'b1;
@@ -45,7 +45,7 @@ module fpu_tb();
 		#12 Reset = 1'b0;
 		#988;
 	endtask
-	task Div(real input1, real input2);
+	task Div(shortreal input1, shortreal input2);
 		a = input1;
 		b = input2;
 		#20 Reset = 1'b1;
@@ -71,12 +71,12 @@ module fpu_tb();
 		Mul(8.50705917302e+37,2);
 		Mul(0,1.7014118346e+38);
 		Mul(5.87747175411e-39,0);
-		Mul($bitstoreal(NAN),2);
-		Mul(5.87747175411e-39,$bitstoreal(NAN));
-		Mul(0,$bitstoreal(PINF));
-		Mul($bitstoreal(NINF),0);
-		Mul($bitstoreal(PINF),2);
-		Mul(-0.3,$bitstoreal(PINF));
+		Mul($bitstoshortreal(NAN),2);
+		Mul(5.87747175411e-39,$bitstoshortreal(NAN));
+		Mul(0,$bitstoshortreal(PINF));
+		Mul($bitstoshortreal(NINF),0);
+		Mul($bitstoshortreal(PINF),2);
+		Mul(-0.3,$bitstoshortreal(PINF));
 		Mul(0,1000);
 		Mul(0.0005,0);
 		Add(1,1);
@@ -94,11 +94,11 @@ module fpu_tb();
 		Add(10,-9.999999);
 		Add(1.7014118346e+38,2e+38);
 		Add(10,-9.9999996);
-		Add(0,$bitstoreal(NAN));
-		Add($bitstoreal(PINF),$bitstoreal(NINF));
-		Add($bitstoreal(NINF),$bitstoreal(PINF));
-		Add($bitstoreal(PINF),5000);
-		Add(0.0005,$bitstoreal(NINF));
+		Add(0,$bitstoshortreal(NAN));
+		Add($bitstoshortreal(PINF),$bitstoshortreal(NINF));
+		Add($bitstoshortreal(NINF),$bitstoshortreal(PINF));
+		Add($bitstoshortreal(PINF),5000);
+		Add(0.0005,$bitstoshortreal(NINF));
 		Add(0,341);
 		Add(0.01234432,0);
 
@@ -110,12 +110,12 @@ module fpu_tb();
 		Div(0.0005,0.0005);
 		Div(0.0005,1e38);
 		Div(100,1e-37);
-		Div($bitstoreal(NAN),500);
-		Div($bitstoreal(PINF),$bitstoreal(NAN));
+		Div($bitstoshortreal(NAN),500);
+		Div($bitstoshortreal(PINF),$bitstoshortreal(NAN));
 		Div(0,0);
-		Div($bitstoreal(PINF),$bitstoreal(PINF));
-		Div($bitstoreal(PINF),5);
-		Div(0,$bitstoreal(PINF));
+		Div($bitstoshortreal(PINF),$bitstoshortreal(PINF));
+		Div($bitstoshortreal(PINF),5);
+		Div(0,$bitstoshortreal(PINF));
 		Div(5000,0);
 
 		$finish();
@@ -126,31 +126,31 @@ module fpu_tb();
 		if (Done) begin
 			case (Operation)
 				2'b00: begin
-					$display("Addition done at %0t, %e + %e = %e, %s", $time, a, b, $bitstoreal(Result), (Result == $realtobits(a + b)) ? "Valid" : "Not Valid");
-					if (Result != $realtobits(a + b))
-						$display("Expected %b \nGot      %b", $realtobits(a + b), Result);
+					$display("Addition done at %0t, %e + %e = %e, %s", $time, a, b, $bitstoshortreal(Result), (Result == $shortrealtobits(a + b)) ? "Valid" : "Not Valid");
+					if (Result != $shortrealtobits(a + b))
+						$display("Expected %b \nGot      %b", $shortrealtobits(a + b), Result);
 				end
 				2'b01: begin
-					$display("Subtraction done at %0t, %e - %e = %e, %s", $time, a, b, $bitstoreal(Result), (Result == $realtobits(a - b)) ? "Valid" : "Not Valid");
-					if ($bitstoreal(Result) != a - b)
-						$display("Expected %b \nGot      %b", $realtobits(a - b), Result);
+					$display("Subtraction done at %0t, %e - %e = %e, %s", $time, a, b, $bitstoshortreal(Result), (Result == $shortrealtobits(a - b)) ? "Valid" : "Not Valid");
+					if ($bitstoshortreal(Result) != a - b)
+						$display("Expected %b \nGot      %b", $shortrealtobits(a - b), Result);
 				end
 				2'b10: begin
-					$display("Multiplication done at %0t, %e x %e = %e, %s", $time, a, b, $bitstoreal(Result), (Result == $realtobits(a * b)) ? "Valid" : "Not Valid");
-					if (Result != $realtobits(a * b))
-						$display("Expected %b \nGot      %b", $realtobits(a * b), Result);
+					$display("Multiplication done at %0t, %e x %e = %e, %s", $time, a, b, $bitstoshortreal(Result), (Result == $shortrealtobits(a * b)) ? "Valid" : "Not Valid");
+					if (Result != $shortrealtobits(a * b))
+						$display("Expected %b \nGot      %b", $shortrealtobits(a * b), Result);
 				end
 				2'b11: begin
-					$display("Division done at %0t, %e / %e = %e, %s", $time, a, b, $bitstoreal(Result), (Result == $realtobits(a / b)) ? "Valid" : "Not Valid");
-					if (Result != $realtobits(a / b))
-						$display("Expected %b \nGot      %b", $realtobits(a/b), Result);
+					$display("Division done at %0t, %e / %e = %e, %s", $time, a, b, $bitstoshortreal(Result), (Result == $shortrealtobits(a / b)) ? "Valid" : "Not Valid");
+					if (Result != $shortrealtobits(a / b))
+						$display("Expected %b \nGot      %b", $shortrealtobits(a/b), Result);
 				end
 			endcase
 			$display("\n\n");
 		end
 	end
 
-	FPU #(.PRECISION(PRECISION)) floatunit ($realtobits(a), $realtobits(b), Clk, Reset, Operation, Result, Done);
+	FPU #(.PRECISION(PRECISION)) floatunit ($shortrealtobits(a), $shortrealtobits(b), Clk, Reset, Operation, Result, Done);
 
 
 endmodule

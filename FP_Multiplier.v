@@ -15,7 +15,7 @@ parameter N = 32;
  ////////////////////////////Parameters settings ////////////////////////////
 localparam M = (N==32)?23:52;
 localparam E = (N==32)?8:11;
- 
+localparam Bias = (N==32)?9'd127 : 12'd1023;
  
  ////////////////////////////////////////////////////////////////////////////
  //					assembly values for output Result                        //
@@ -60,12 +60,12 @@ localparam E = (N==32)?8:11;
  assign m2 = B[M-1:0] ; 
  
  
-assign sum_e1_e2 = e1 + e2 ; // first step in mult is to add extended exponents 
 
 // extend mantissa by 1 for each and multiply
 
 assign non_norm_mul={1'b1,m1}*{1'b1,m2}; 
 
+assign sum_e1_e2 = (non_norm_mul[(2*M)+1] == 1'b1)? e1 + e2 + 1: e1 + e2; // first step in mult is to add extended exponents 
  // assemble output bits 
  
 assign Result = {sign, exp_out[E-1:0], norm_mul} ; 
@@ -120,21 +120,27 @@ assign Result = {sign, exp_out[E-1:0], norm_mul} ;
  sign = s1 ^ s2 ; // output sign 
  if (non_norm_mul[(2*M)+1]==1) //Normalizaion with rounding \
  begin 
- exp_out = (N==32)?sum_e1_e2 - 9'd126:sum_e1_e2 - 11'd1022; 
- norm_mul = non_norm_mul[2*M:M+1]; 
+ exp_out = (N==32)?sum_e1_e2 - 9'd127:sum_e1_e2 - 11'd1023; 
+ norm_mul = non_norm_mul[2*M:M+1];
+//  sum_e1_e2 = sum_e1_e2 + 1'b1; 
  end 
 else 
  begin 
  exp_out = (N==32)?sum_e1_e2 - 9'd127:sum_e1_e2 - 11'd1023; 
  norm_mul = non_norm_mul[(2*M)-1:M]; 
  end
- if(exp_out[E] == 1'b1)
+ if(sum_e1_e2 > 3*Bias)
  begin
-//overflow
- sign = NaN[N-1];
- exp_out[E-1:0] = NaN[N-2:M];
- norm_mul[M-1:0] = NaN[M-1:0];
- end 
+    //overflow
+ exp_out[E-1:0] = p_inf[N-2:M];
+ norm_mul[M-1:0] = p_inf[M-1:0];
+ end
+ if(sum_e1_e2 < Bias)
+ begin
+    //underflow
+ exp_out[E-1:0] = zero[N-2:M];
+ norm_mul[M-1:0] = zero[M-1:0];
+ end
  end 
  end
 endmodule
