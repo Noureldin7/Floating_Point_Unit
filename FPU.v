@@ -42,7 +42,7 @@ module FPU
 	wire [PRECISION-1:0] MulResult;
 
 
-
+	reg [1:0] counter;
 
 
 	assign Result =	(LoadDiv | ExternalAddLoad) ? {PRECISION{1'b0}}:
@@ -61,10 +61,15 @@ module FPU
 			StoredOperation <= Operation;
 			ExternalAddLoad <= ~Operation[1];
 			LoadDiv <= &Operation;
+			counter <= 2'b00;
 		end
 		else begin
-			ExternalAddLoad <= 1'b0;
-			LoadDiv <= 1'b0;
+			if (counter < 2'b10)
+				counter <= counter + 2'b01;
+			if (counter == 1'b1) begin
+				ExternalAddLoad <= 1'b0;
+				LoadDiv <= 1'b0;
+			end
 		end
 	end
 
