@@ -21,11 +21,11 @@ localparam expSize = (PRECISION==32) ? 8 : 11;
 localparam mantSize = (PRECISION==32) ? 23 : 52;
 
 localparam expInf = (PRECISION==32) ? 8'hff : 11'hfff;
-localparam mantInf = (PRECISION==32) ? {1'h1,23'h0} : {1'h1,52'h0};
+localparam mantInf = (PRECISION==32) ? 23'h0 : 52'h0;
 localparam expNaN = (PRECISION==32) ? 8'hff : 11'hfff;
-localparam mantNaN = (PRECISION==32) ? {1'h1,23'hffffff} : {1'h1,52'hfffffffffffff};
+localparam mantNaN = (PRECISION==32) ? 23'hffffff : 52'hfffffffffffff;
 localparam expZero = (PRECISION==32) ? 8'h0 : 11'h0;
-localparam mantZero = (PRECISION==32) ? {1'h1,23'h0} : {1'h1,52'h0};
+localparam mantZero = (PRECISION==32) ? 23'h0 : 52'h0;
 localparam neglectThreshold = (PRECISION==32) ? 5'd23 : 6'd52;
 
 
@@ -35,7 +35,8 @@ wire [mantSize:0] wire_mantA = {1'b1,inA[mantSize-1:0]};
 wire wire_signB = inB[PRECISION-1] ^ op;
 wire [expSize-1:0] wire_expB = inB[PRECISION-2:mantSize];
 wire [mantSize:0] wire_mantB = {1'b1,inB[mantSize-1:0]};
-
+wire wire_Aisbig = (wire_expA>wire_expB)||(wire_expA==wire_expB && wire_mantA>wire_mantB)?1'b1:1'b0;
+wire wire_diffSign = wire_signA ^ wire_signB;
 
 reg signA;
 reg [expSize-1:0] expA;
@@ -84,8 +85,8 @@ always @(posedge clk) begin
 			mantOut <= {2'h0,mantNaN};
 			specialCase <= 1'b1;
 		end
-		else if(wire_expA==expInf && wire_mantA==mantInf) begin
-			if(wire_expB==expInf && wire_mantB==mantInf && diffSign==1'b1) begin
+		else if(wire_expA==expInf && wire_mantA[mantSize-1:0]==mantInf) begin
+			if(wire_expB==expInf && wire_mantB[mantSize-1:0]==mantInf && wire_diffSign==1'b1) begin
 				signOut <= 1'b0;
 				expOut <= expNaN;
 				mantOut <= {2'h0,mantNaN};
@@ -98,7 +99,7 @@ always @(posedge clk) begin
 			specialCase <= 1'b1;
 		end
 		else if(wire_expB==expInf && wire_mantB[mantSize-1]==1'b0) begin
-			if(wire_expA==expInf &&wire_mantA==mantInf && diffSign==1'b1) begin
+			if(wire_expA==expInf &&wire_mantA[mantSize-1:0]==mantInf && wire_diffSign==1'b1) begin
 				signOut <= 1'b0;
 				expOut <= expNaN;
 				mantOut <= {2'h0,mantNaN};
@@ -110,25 +111,25 @@ always @(posedge clk) begin
 			end
 			specialCase <= 1'b1;
 		end
-		else if(wire_expA == expZero && wire_mantA == mantZero) begin
+		else if(wire_expA == expZero && wire_mantA[mantSize-1:0] == mantZero) begin
 			signOut <= wire_signB;
 			expOut <= wire_expB;
 			mantOut <= {1'h0,wire_mantB};
 			specialCase <= 1'b1;
 		end
-		else if(wire_expB == expZero && wire_mantB == mantZero) begin
+		else if(wire_expB == expZero && wire_mantB[mantSize-1:0] == mantZero) begin
 			signOut <= wire_signA;
 			expOut <= wire_expA;
 			mantOut <= { 1'h0 , wire_mantA };
 			specialCase <= 1'b1;
 		end
-		else if (Aisbig==1'b1 && wire_expA-wire_expB > neglectThreshold) begin
+		else if (wire_Aisbig==1'b1 && wire_expA-wire_expB > neglectThreshold) begin
 			signOut <= wire_signA;
 			expOut <= wire_expA;
 			mantOut <= {1'h0,wire_mantA};
 			specialCase <= 1'b1;
 		end
-		else if (Aisbig==1'b0 && wire_expB-wire_expA > neglectThreshold) begin
+		else if (wire_Aisbig==1'b0 && wire_expB-wire_expA > neglectThreshold) begin
 			signOut <= wire_signB;
 			expOut <= wire_expB;
 			mantOut <= {1'h0,wire_mantB};
@@ -143,12 +144,14 @@ always @(posedge clk) begin
 	//! Shifting For Addition Only
 	else if (addShiftPhase==1'b1) begin
 		if (validOutput <= 1'b0) begin
-			if(mantOut[mantSize+1]==1'b1) begin
+			if(expOut+1'b1==expInf) begin
+				mantOut <= {2'h0,mantInf};
+				expOut <= expInf;
+			end
+			else if(mantOut[mantSize+1]==1'b1) begin
 				mantOut[mantSize-1:0] <= mantOut[mantSize:1];
 				expOut <= expOut + 1'b1;
 			end
-			if(expOut==expInf)
-				mantOut <= {2'h0,mantInf};
 			validOutput <= 1'b1;
 		end
 	end
@@ -157,22 +160,25 @@ always @(posedge clk) begin
 	else if (subShiftPhase==1'b1) begin
 		if (validOutput <= 1'b0)
 			if(mantOut[mantSize:mantSize-3]==4'b0000) begin
-				mantOut[mantSize:0] <= {mantOut[mantSize-4:0],4'b0000};
 				if(expOut<3'h4) begin
 					mantOut <= {2'h0,mantZero};
+					expOut <= expZero;
 					validOutput <= 1'b1;
 				end
-				else
+				else begin
+					mantOut[mantSize:0] <= {mantOut[mantSize-4:0],4'b0000};
 					expOut <= expOut - 3'h4;
+				end
 			end
 			else if (mantOut[mantSize]==1'b0) begin
-				mantOut[mantSize:0] <= {mantOut[mantSize-1:0],1'b0};
 				if(expOut==expZero) begin
 					mantOut <= {2'h0,mantZero};
 					validOutput <= 1'b1;
 				end
-				else
+				else begin
+					mantOut[mantSize:0] <= {mantOut[mantSize-1:0],1'b0};
 					expOut <= expOut - 1'b1;
+				end
 			end
 			else
 				validOutput <= 1'b1;
@@ -181,16 +187,6 @@ always @(posedge clk) begin
 	else begin	
 		//!Check Who Is Bigger To Set Sign Bit And Shift The Smaller Number
 		if (Aisbig==1'b1) begin
-			//!Small Shift
-			if (expA-expB<4) begin
-				mantB <= {1'b0,mantB[mantSize:1]};
-				expB <= expB + 1'b1;
-			end
-			//!Big Shift
-			else begin
-				mantB <= {4'b0000,mantB[mantSize:4]};
-				expB <= expB + 3'h4;
-			end
 			//!Synchronization Finished
 			if (expA==expB) begin
 				if(diffSign==1'b1) begin
@@ -204,19 +200,19 @@ always @(posedge clk) begin
 				signOut <= signA;
 				expOut <= expA;
 			end
+			//!Small Shift
+			else if (expA-expB<4) begin
+				mantB <= {1'b0,mantB[mantSize:1]};
+				expB <= expB + 1'b1;
+			end
+			//!Big Shift
+			else begin
+				mantB <= {4'b0000,mantB[mantSize:4]};
+				expB <= expB + 3'h4;
+			end
 		end
 		else begin
-			//!Big Shift
-			if (expB-expA<4) begin
-				mantA <= {1'b0,mantA[mantSize:1]};
-				expA <= expA + 1'b1;
-			end
-			//!Small Shift
-			else begin
-				mantA <= {4'b0000,mantA[mantSize:4]};
-				expA <= expA + 3'h4;
-			end
-			//!Synchronization Finished
+		//!Synchronization Finished
 			if (expA==expB) begin
 				if(diffSign==1'b1) begin
 					mantOut <= mantB - mantA;
@@ -228,6 +224,16 @@ always @(posedge clk) begin
 				end
 				signOut <= signB;
 				expOut <= expB;
+			end
+			//!Big Shift
+			else if (expB-expA<4) begin
+				mantA <= {1'b0,mantA[mantSize:1]};
+				expA <= expA + 1'b1;
+			end
+			//!Small Shift
+			else begin
+				mantA <= {4'b0000,mantA[mantSize:4]};
+				expA <= expA + 3'h4;
 			end
 		end
 	end
