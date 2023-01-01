@@ -52,7 +52,7 @@ module fpu_tb();
 		Operation = 2'b11;
 		$display("Division started at %0t, %f / %f", $time, a, b);
 		#12 Reset = 1'b0;
-		#488;
+		#2088;
 	endtask
 
 	initial begin
@@ -102,6 +102,21 @@ module fpu_tb();
 		Add(0,341);
 		Add(0.01234432,0);
 
+		// Div(1,2);
+		// Div(4,4);
+		// Div(100,50);
+		// Div(100,0.00001);
+		// Div(0.0005,0.00005);
+		// Div(0.0005,0.0005);
+		// Div(0.0005,1e38);
+		// Div(100,1e-37);
+		// Div($bitstoshortreal(NAN),500);
+		// Div($bitstoshortreal(PINF),$bitstoshortreal(NAN));
+		// Div(0,0);
+		// Div($bitstoshortreal(PINF),$bitstoshortreal(PINF));
+		// Div($bitstoshortreal(PINF),5);
+		// Div(0,$bitstoshortreal(PINF));
+		// Div(5000,0);
 
 		$finish();
 	end	
